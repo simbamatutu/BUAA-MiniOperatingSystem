@@ -1,23 +1,22 @@
 #include<stdio.h>
 int main()
 {
-	int n;
+	int n,rev=0,remainer,a;
 	scanf("%d",&n);
+	a=n;
+
+	while(n!=0){
+		remainer=n%10;
+		rev=rev*10+remainer;
+		n/=10;
+	}
 
 
 
-
-
-
-
-
-
-
-
-	if(){
-		printf("Y");
+	if(rev==a){
+		printf("Y\n");
 	}else{
-		printf("N");
+		printf("N\n");
 	}
 	return 0;
 }
