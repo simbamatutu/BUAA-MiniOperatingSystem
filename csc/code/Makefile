@@ -1,7 +1,7 @@
 all: fibo
 
 fibo: main.o fibo.o
-	gcc  main.o fibo.o -o ~/work/77066004-lab/csc/fibo
+	gcc  main.o fibo.o -o fibo
 
 main.o: main.c
 	gcc main.c -c  -I/home/jovyan/work/77066004-lab/csc/include
