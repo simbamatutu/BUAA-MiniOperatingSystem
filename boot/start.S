@@ -31,9 +31,13 @@ LEAF(_start) /*LEAF is defined in asm.h and LEAF functions don't call other func
       Exercise 1.4. Please complete this part.
       To do: 
 	  set up stack.
+	li sp, 0x80400000
+	li t0,0x80400000
+	sw t0,mCONTEXT
 	  hint: you can reference the memory layout in the include/mmu.h.
 	  call main func.
 	*/
+	jal main
 
 			
 loop:
