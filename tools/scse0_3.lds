@@ -25,10 +25,6 @@ SECTIONS
 .data : {
 	*(.data)
 }
-
-.sdata : {
-	*(.sdata)
-}
 . = 0x80400000;
 
 
