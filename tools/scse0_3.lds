@@ -1,32 +1,23 @@
 OUTPUT_ARCH(mips)
-/*
-Set the architecture to mips.
-*/
 ENTRY(_start)
-/*
-Set the ENTRY point of the program to _start.
-*/
+
 SECTIONS
 {
-/*
-  Exercise 1.3. Please complete this part.
-  To do:
-  fill in the correct address of the key section
-  such as text data bss.
-*/
-
-. = 0x80010000;
-.text : {
+  . = 0x80010000;
+  .text : {
+    *(.int)
 	*(.text)
-}
-.bss :{
-	*(.bss)
-}
-.data : {
+	*(.fini)
+        }
+  .data : {
 	*(.data)
-}
-. = 0x80400000;
-
-
-end = . ;
+	}
+  .bss  : {
+	*(.bss)
+    }
+  .sdata : {
+    *(.sdata)
+    }
+  . = 0x80400000;
+  end = . ;
 }
