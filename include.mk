@@ -3,8 +3,6 @@
 # Copyright (C) 2007 Beihang University
 # Written By Zhu Like ( zlike@cse.buaa.edu.cn )
 
-
-
 # Exercise 1.1. Please modify the CROSS_COMOILE path.
 
 CROSS_COMPILE := /OSLAB/compiler/usr/bin/mips_4KC-
