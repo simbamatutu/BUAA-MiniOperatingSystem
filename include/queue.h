@@ -114,16 +114,19 @@
         // Note: assign a to b <==> a = b
 	
         //Step 1, assign elm.next to listelem.next.
-        //Step 2: Judge whether listelm.next is NULL, if not, then assign listelm.pre to a proper value.
+       //Step 2: Judge whether listelm.next is NULL, if not, then assign listelm.pre to a proper value.
         //step 3: Assign listelm.next to a proper value.
         //step 4: Assign elm.pre to a proper value.
-	(elm)->field.le_next = (listelm) ->field.le_next;			 \
-	if((elm)-field.le_next != NULL){                   			 \
-		((elm)->field.le_next)->field.le_prev = &((elm)->field.le_next);  \
-}										   \
-(listelm)->field.le_next=elm;                 					    \
-(elm)->field.le_prev=&((listelm)->field.le_next);           			    \
-}while(0)
+	
+	 
+	if ((LIST_NEXT((elm), field) = LIST_NEXT((listelm), field)) != NULL)\
+			LIST_NEXT((listelm), field)->field.le_prev =		\
+					&LIST_NEXT((elm), field);				\
+		LIST_NEXT((listelm), field) = (elm);				\
+		(elm)->field.le_prev = &LIST_NEXT((listelm), field);		\
+	} while (0)
+
+
 /*
  * Insert the element "elm" *before* the element "listelm" which is
  * already in the list.  The "field" name is the link element
