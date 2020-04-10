@@ -206,7 +206,7 @@ page_init(void)
 		if(ULIM + page2pa(apage) < freemem){
 			apage->pp_ref = 1;
 		}else{
-			apage-pp_ref =0;
+			apage->pp_ref =0;
 			LIST_INSERT_HEAD(&page_free_list, apage, pp_link);
 		}
 	}
