@@ -110,16 +110,15 @@
  */
 
 
-#define LIST_INSERT_AFTER(listelm, elm, field)do{      \
-        // Note: assign a to b <==> a = b
-	
+#define LIST_INSERT_AFTER(listelm, elm, field)do{     \
 	(elm)->field.le_next = (listelm)->field.le_next;                        \
             if ((elm)->field.le_next != NULL) {                                     \
                 ((elm)->field.le_next)->field.le_prev = &((elm)->field.le_next);    \
             }                                                                       \
             (listelm)->field.le_next = elm;                                         \
             (elm)->field.le_prev = &((listelm)->field.le_next);                     \
-        } while (0)
+        } while (0)     
+   // Note: assign a to b <==> a = b
         //Step 1, assign elm.next to listelem.next.
        //Step 2: Judge whether listelm.next is NULL, if not, then assign listelm.pre to a proper value.
         //step 3: Assign listelm.next to a proper value.
