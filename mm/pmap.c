@@ -525,7 +525,7 @@ physical_memory_manage_check(void)
 		//printf("0x%x  0x%x\n",&test_pages[i], test_pages[i].pp_link.le_next);
 
 	}
-	p = LIST_FIRST(&test_free);
+	p=LIST_FIRST(&test_free);
 	int answer1[]={0,1,2,3,4,5,6,7,8,9};
 	assert(p!=NULL);
 	while(p!=NULL)
