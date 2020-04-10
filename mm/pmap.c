@@ -512,6 +512,13 @@ physical_memory_manage_check(void)
 	//test inert tail
 	for(i=0;i<10;i++) {
 		test_pages[i].pp_ref=i;
+
+
+
+
+
+
+
 		//test_pages[i].pp_link=NULL;
 		//printf("0x%x  0x%x\n",&test_pages[i], test_pages[i].pp_link.le_next);
 		LIST_INSERT_TAIL(&test_free,&test_pages[i],pp_link);
