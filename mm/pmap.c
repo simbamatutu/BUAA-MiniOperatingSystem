@@ -459,7 +459,7 @@ tlb_invalidate(Pde *pgdir, u_long va)
 void
 physical_memory_manage_check(void)
 {
-    struct Page *pp, *pp0, *pp1, *pp2;
+  struct Page *pp, *pp0, *pp1, *pp2;
     struct Page_list fl;
     int *temp;
 
@@ -512,25 +512,17 @@ physical_memory_manage_check(void)
 	//test inert tail
 	for(i=0;i<10;i++) {
 		test_pages[i].pp_ref=i;
-
-
-
-
-
-
-
 		//test_pages[i].pp_link=NULL;
 		//printf("0x%x  0x%x\n",&test_pages[i], test_pages[i].pp_link.le_next);
-	//	LIST_INSERT_TAIL(&test_free,&test_pages[i],pp_link);
+		LIST_INSERT_TAIL(&test_free,&test_pages[i],pp_link);
 		//printf("0x%x  0x%x\n",&test_pages[i], test_pages[i].pp_link.le_next);
 
 	}
-	//p=LIST_FIRST(&test_free);
+	p = LIST_FIRST(&test_free);
 	int answer1[]={0,1,2,3,4,5,6,7,8,9};
 	assert(p!=NULL);
 	while(p!=NULL)
 	{
-
 		//printf("%d %d\n",p->pp_ref,answer1[j]);
 		assert(p->pp_ref==answer1[j++]);
 		//printf("ptr: 0x%x v: %d\n",(p->pp_link).le_next,((p->pp_link).le_next)->pp_ref);
@@ -557,7 +549,10 @@ physical_memory_manage_check(void)
 
    
     printf("physical_memory_manage_check() succeeded\n");
-}
+} 
+
+   
+
 
 
 void
