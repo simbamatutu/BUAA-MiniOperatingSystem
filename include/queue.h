@@ -111,14 +111,14 @@
 
 
 #define LIST_INSERT_AFTER(listelm, elm, field)do{     \
-/*	 (elm)->field.le_next = (listelm)->field.le_next;                        \
+	 (elm)->field.le_next = (listelm)->field.le_next;                        \
             if ((elm)->field.le_next != NULL) {                                     \
                 ((elm)->field.le_next)->field.le_prev = &((elm)->field.le_next);    \
             }                                                                       \
             (listelm)->field.le_next = elm;                                         \
             (elm)->field.le_prev = &((listelm)->field.le_next);                     \
         } while (0)
-	if(((elm)->field.le_next=(listelm)->field.le_next)!=NULL){                      \
+/*	if(((elm)->field.le_next=(listelm)->field.le_next)!=NULL){                      \
                         (listelm)->field.le_next->field.le_prev=&((listelm)->field.le_next);     \
                 }                                                                               \
                 (elm)->field.le_prev=&(LIST_NEXT((listelm),field));                             \
