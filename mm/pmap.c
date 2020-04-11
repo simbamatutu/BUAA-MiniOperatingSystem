@@ -71,7 +71,7 @@ static void *alloc(u_int n, u_int align, int clear)
 
     // We're out of memory, PANIC !!
     if (PADDR(freemem) >= maxpa) {
-        panic("out of memorty\n");
+        panic("out of memory\n");
         return (void *)-E_NO_MEM;
     }
 
@@ -93,23 +93,21 @@ static Pte *boot_pgdir_walk(Pde *pgdir, u_long va, int create)
     /* Hint: Use KADDR and PTE_ADDR to get the page table from page directory
      * entry value. */
   pgdir_entryp = pgdir +  PDX(va);
-  if(*pgdir_entryp & PTE_V){
-	pgtable = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp));
- }
-
+  pgtable = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp));
     /* Step 2: If the corresponding page table is not exist and parameter `create`
      * is set, create one. And set the correct permission bits for this new page
      * table. */
- else if(create == 1){
-	pgtable = alloc(BY2PG,BY2PG,1);
-	*pgdir_entryp= PADDR(pgtable) | PTE_V;
- }else{
-	panic("boot_pgdir_failed");
- }
-
+  if((*pgdir_entryp&PTE_V)==0){
+        if(create){
+            pgtable = (Pte *)alloc(BY2PG,BY2PG,1);
+            *pgdir_entryp = PADDR(pgtable)|PTE_V;
+        } else {
+            return 0;
+        }
+    }
     /* Step 3: Get the page table entry for `va`, and return it. */
- return pgtable + PTX(va);
-
+ pgtable_entry = pgtable + PTX(va);
+    return pgtable_entry;
 }
 
 /*Overview:
@@ -235,15 +233,16 @@ page_alloc(struct Page **pp)
     struct Page *ppage_temp;
 
     /* Step 1: Get a page from free memory. If fails, return the error code.*/
-	if((ppage_temp =LIST_FIRST(&page_free_list)) == NULL){
-		return -E_NO_MEM;
-	}
+    ppage_temp = LIST_FIRST(&page_free_list);
+    if(ppage_temp == NULL){
+        return -E_NO_MEM;
+    }
+	*pp=ppage_temp;
 	LIST_REMOVE(ppage_temp,pp_link);
     /* Step 2: Initialize this page.
      * Hint: use `bzero`. */
 
-	bzero((void*)page2kva(ppage_temp), BY2PG);
-	*pp = ppage_temp;
+	bzero((void*)page2kva(*pp), BY2PG);
 	return 0;
 }
 
@@ -259,10 +258,10 @@ page_free(struct Page *pp)
 		return;
 	}
 
-	if(pp->pp_ref == 0){
-		LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
-	return;
-	}
+	else if(pp->pp_ref == 0){
+        LIST_INSERT_HEAD(&page_free_list,pp,pp_link);
+        return ;
+    }
 
     /* Step 2: If the `pp_ref` reaches to 0, mark this page as free and return. */
 
@@ -296,31 +295,28 @@ pgdir_walk(Pde *pgdir, u_long va, int create, Pte **ppte)
     struct Page *ppage;
 
     /* Step 1: Get the corresponding page directory entry and page table. */
-	pgdir_entryp = pgdir + PDX(va);
-	if (*pgdir_entryp & PTE_V) {
-        pgtable = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp));
-    }
+	pgdir_entryp = &pgdir[PDX(va)];
+    pgtable = (Pte *)KADDR(PTE_ADDR(*pgdir_entryp));
     /* Step 2: If the corresponding page table is not exist(valid) and parameter `create`
      * is set, create one. And set the correct permission bits for this new page
      * table.
      * When creating new page table, maybe out of memory. */
 	
-	else if (create == 1) {
-        if (page_alloc(&ppage) == 0) {
-            pgtable = page2kva(ppage);
-            *pgdir_entryp = PADDR(pgtable) | PTE_R | PTE_V;
-            ppage->pp_ref++;
-        } else {
+	if(((*pgdir_entryp&PTE_V)==0)&&create){
+        if(page_alloc(&ppage)==-E_NO_MEM){
             *ppte = 0;
             return -E_NO_MEM;
         }
-    } else {
-        *ppte = 0;
-        return 0;
+        ppage->pp_ref++;
+        *pgdir_entryp = PADDR((Pte)page2kva(ppage)|PTE_R|PTE_V);
     }
-
     /* Step 3: Set the page table entry to `*ppte` as return value. */
-	*ppte = pgtable + PTX(va);
+	if((*pgdir_entryp) == 0){
+        *ppte = 0;
+    }else{
+        pgtable=(Pte *)KADDR(PTE_ADDR(*pgdir_entryp));
+        *ppte = &pgtable[PTX(va)];
+    }
     return 0;
 }
 
