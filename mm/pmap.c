@@ -29,9 +29,11 @@ void mips_detect_memory()
      * (When use real computer, CMOS tells us how many kilobytes there are). */
 
     // Step 2: Calculate corresponding npage value.
-	basemem= 64*1024*1024;
-	npage=basemem / (4 * 1024);
-	extmem = maxpa - basemem;
+	maxpa=0x4000000;
+        npage=maxpa/(4*1024);
+        basemem=maxpa;
+        extmem=0;
+
     printf("Physical memory: %dK available, ", (int)(maxpa / 1024));
     printf("base = %dK, extended = %dK\n", (int)(basemem / 1024),
            (int)(extmem / 1024));
@@ -195,21 +197,18 @@ page_init(void)
 
     /* Step 3: Mark all memory blow `freemem` as used(set `pp_ref`
      * filed to 1) */
-	struct Page *apage;
-	u_long i;
-	for(i=0;i<npage;i++){
-		apage = &pages[i];
-		if(ULIM + page2pa(apage) < freemem){
-			apage->pp_ref = 1;
-		}else{
-			apage->pp_ref =0;
-			LIST_INSERT_HEAD(&page_free_list, apage, pp_link);
-		}
-	}
-
+ int u;
+    int n = PADDR(freemem) / BY2PG;
+    for( u = 0; u < n; u++ ){
+        pages[u].pp_ref = 1;
+    }
 		
 
     /* Step 4: Mark the other memory as free. */
+	for( u = n; u < npage; u++){
+        pages[u].pp_ref = 0;
+        LIST_INSERT_HEAD(&page_free_list,&pages[u],pp_link);
+    }
 }
 
 /*Overview:
