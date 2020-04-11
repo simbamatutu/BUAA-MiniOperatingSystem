@@ -89,7 +89,6 @@ static Pte *boot_pgdir_walk(Pde *pgdir, u_long va, int create)
 
     Pde *pgdir_entryp;
     Pte *pgtable, *pgtable_entry;
-
     /* Step 1: Get the corresponding page directory entry and page table. */
     /* Hint: Use KADDR and PTE_ADDR to get the page table from page directory
      * entry value. */
@@ -518,11 +517,11 @@ physical_memory_manage_check(void)
 		//printf("0x%x  0x%x\n",&test_pages[i], test_pages[i].pp_link.le_next);
 
 	}
-	//	p = LIST_FIRST(&test_free);
+	p = LIST_FIRST(&test_free);
 	int answer1[]={0,1,2,3,4,5,6,7,8,9};
 	assert(p!=NULL);
-	while(p!=NULL)
-	{
+
+	while (p!=NULL){
 		//printf("%d %d\n",p->pp_ref,answer1[j]);
 		assert(p->pp_ref==answer1[j++]);
 		//printf("ptr: 0x%x v: %d\n",(p->pp_link).le_next,((p->pp_link).le_next)->pp_ref);
