@@ -32,8 +32,7 @@ void mips_detect_memory()
 	maxpa=0x4000000;
         npage=maxpa/(4*1024);
         basemem=maxpa;
-        extmem=0;
-
+        extmem = maxpa - basemem;
     printf("Physical memory: %dK available, ", (int)(maxpa / 1024));
     printf("base = %dK, extended = %dK\n", (int)(basemem / 1024),
            (int)(extmem / 1024));

@@ -9,7 +9,7 @@ nop
 	mtc0	a0,CP0_ENTRYHI
 	nop
 	// insert tlbp or tlbwi
-	tlbwi
+	tlbp
 	nop
 	nop
 	nop
@@ -21,7 +21,7 @@ nop
 	mtc0	zero,CP0_ENTRYLO0
 	nop
 	// insert tlbp or tlbwi
-	tlbp
+	tlbwi
 NOFOUND:
 
 	mtc0	k1,CP0_ENTRYHI
