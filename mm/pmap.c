@@ -454,7 +454,7 @@ tlb_invalidate(Pde *pgdir, u_long va)
         tlb_out(PTE_ADDR(va));
     }
 }
-
+/*
 void
 physical_memory_manage_check(void)
 {
@@ -550,7 +550,7 @@ physical_memory_manage_check(void)
     printf("physical_memory_manage_check() succeeded\n");
 } 
 
-   
+  */ 
 
 
 
