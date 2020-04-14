@@ -60,9 +60,12 @@ int envid2env(u_int envid, struct Env **penv, int checkperm)
     struct Env *e;
     /* Hint: If envid is zero, return curenv.*/
     /*Step 1: Assign value to e using envid. */
-
-
-
+     if (envid == 0) {
+        *penv = curenv;
+        return 0;
+    }
+	
+	e = &envs[ENVX(envid)];
     if (e->env_status == ENV_FREE || e->env_id != envid) {
         *penv = 0;
         return -E_BAD_ENV;
@@ -75,8 +78,10 @@ int envid2env(u_int envid, struct Env **penv, int checkperm)
      *     or an immediate child of curenv.
      *     If not, error! */
     /*     Step 2: Make a check according to checkperm. */
-
-
+   if (checkperm && e != curenv && e->env_parent_id != curenv->env_id) {
+        *penv = 0;
+        return -E_BAD_ENV;
+    }
 
 
     *penv = e;
@@ -97,16 +102,24 @@ env_init(void)
 {
     int i;
     /*Step 1: Initial env_free_list. */
-
+	LIST_INIT(&env_free_list);
 
     /*Step 2: Traverse the elements of 'envs' array,
      * set their status as free and insert them into the env_free_list.
-     * Choose the correct loop order to finish the insertion.
+    
+ * Choose the correct loop order to finish the insertion.
      * Make sure, after the insertion, the order of envs in the list
      * should be the same as it in the envs array. */
+	struct Env *aenv;
+	for(i= NENV-1; i>=0; i--){
+		aenv=&envs[i];
 
-
-}
+		aenv->env_status=ENV_FREE;
+		LIST_INSERT_HEAD(&env_free_list,aenv,env_link);
+	}
+	
+	LIST_INIT(&env_sched_list[0]);
+	LIST_INIT(&env_sched_list[1]);}
 
 
 /* Overview:
@@ -123,7 +136,7 @@ env_setup_vm(struct Env *e)
     int i, r;
     struct Page *p = NULL;
     Pde *pgdir;
-
+	
     /* Step 1: Allocate a page for the page directory
      * using a function you completed in the lab2 and add its pp_ref.
      * pgdir is the page directory of Env e, assign value for it. */
