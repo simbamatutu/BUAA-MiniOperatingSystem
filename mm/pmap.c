@@ -142,6 +142,8 @@ void boot_map_segment(Pde *pgdir, u_long va, u_long size, u_long pa, int perm)
 	}
 }
 
+
+
 /* Overview:
     Set up two-level page table.
 
