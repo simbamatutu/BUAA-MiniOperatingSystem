@@ -23,7 +23,8 @@ void mips_init()
 	 * interesting, have fun please*/
 
 
-	
+	ENV_CREATE_PRIORITY(user_A, 2);
+	ENV_CREATE_PRIORITY(user_B, 1);
 	trap_init();
 	kclock_init();
 	panic("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
