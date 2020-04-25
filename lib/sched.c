@@ -29,4 +29,24 @@ void sched_yield(void)
      *  functions or macros below may be used (not all):
      *  LIST_INSERT_TAIL, LIST_REMOVE, LIST_FIRST, LIST_EMPTY
      */
+
+    struct Env *e = curenv;
+    count++;
+    if(e) {
+	if(count < e->env_pri) {
+	  env_run(e);
+		return;
+		}
+		LIST_REMOVE(e, env_sched_link);
+		LIST_INSERT_HEAD(&env_sched_list[1-point], e, env_sched_link);
+	}
+	if (LIST_EMPTY(&env_sched_list[point])) {
+		point ^= 1;
+	}
+	count = 0;
+	e = LIST_FIRST(&env_sched_list[point]);
+	if(!e) {
+		return;
+	}
+	env_run(e);
 }
