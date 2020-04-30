@@ -86,13 +86,18 @@ pgfault(u_int va)
 	//	writef("fork.c:pgfault():\t va:%x\n",va);
     
     //map the new page at a temporary place
-
+	tmp = UTEXT - BY2PG;
+        va = ROUNDDOWN(va,BY2PG);
 	//copy the content
-	
-    //map the page on the appropriate place
-	
+	if(((*vpt)[VPN(va)] & PTE_COW)==0){
+                user_panic("not a COW!");
+        }   
+	 //map the page on the appropriate place
+	syscall_mem_alloc(0,tmp,PTE_V|PTE_R);
+        user_bcopy((void*)va,(void*)tmp,BY2PG);
+        syscall_mem_map(0,tmp,0,va,PTE_V|PTE_R);
     //unmap the temporary place
-	
+	syscall_mem_unmap(0,tmp);	
 }
 
 /* Overview:
@@ -117,7 +122,16 @@ duppage(u_int envid, u_int pn)
 {
 	u_int addr;
 	u_int perm;
-
+	 perm = (*vpt)[pn] & 0xfff;
+        if (perm & PTE_V == 0) {
+                return;
+        }
+        if(((perm & PTE_R)!=0) && ((perm & PTE_LIBRARY)==0)){
+                syscall_mem_map(0,addr,envid,addr,perm|PTE_COW);
+                syscall_mem_map(0,addr,0,addr,perm|PTE_COW);
+        } else {
+                syscall_mem_map(0,addr,envid,addr,perm);
+        }
 	//	user_panic("duppage not implemented");
 }
 
@@ -140,13 +154,30 @@ fork(void)
 	extern struct Env *envs;
 	extern struct Env *env;
 	u_int i;
-
-
+	set_pgfault_handler(pgfault);
+        newenvid = syscall_env_alloc();
+        if(newenvid==0){
+                env = envs + ENVX(syscall_getenvid());
+        } else {
+                writef("fathern");
+                for(i = 0;i < USTACKTOP;i+=BY2PG){
+                        if ((*vpd)[PDX(i)] == 0) {
+                                i = i - BY2PG;
+                                i = i + PDMAP;
+                                continue;
+                        }
+                        duppage(newenvid,VPN(i));
+                }
+                writef("endn");
+                syscall_mem_alloc(newenvid,UXSTACKTOP-BY2PG,PTE_V|PTE_R);
+                syscall_set_pgfault_handler(newenvid,__asm_pgfault_handler,UXSTACKTOP);
+                syscall_set_env_status(newenvid,ENV_RUNNABLE);
+        }
 	//The parent installs pgfault using set_pgfault_handler
 
 	//alloc a new alloc
 
-
+	writef("10n");
 	return newenvid;
 }
 
