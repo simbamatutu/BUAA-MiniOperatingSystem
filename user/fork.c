@@ -165,32 +165,33 @@ fork(void)
 	u_int newenvid;
 	extern struct Env *envs;
 	extern struct Env *env;
-	u_int i,j;
+	u_int i;
 	set_pgfault_handler(pgfault);
-        newenvid = syscall_env_alloc();
-	if (newenvid == 0) {
+        //alloc a new env
+	if((newenvid = syscall_env_alloc())==0){
 		env = &envs[ENVX(syscall_getenvid())];
 		return 0;
 	}
-
-	for (i = 0; i < USTACKTOP; i += PDMAP) {
-		if ((*vpd)[PDX(i)]) {
-			for(j = 0; j < PDMAP && i + j < USTACKTOP; j += BY2PG){
-				if((*vpt)[VPN(i + j)]){
-					duppage(newenvid, VPN(i + j));
-				}
-			}
+	for(i=0;i<UTOP-2*BY2PG;i+=BY2PG){
+		if(((*vpd)[VPN(i)/1024])!=0 && ((*vpt)[VPN(i)])!=0){
+			duppage(newenvid,VPN(i));
 		}
 	}
-	if (syscall_mem_alloc(newenvid, UXSTACKTOP - BY2PG, PTE_V | PTE_R | PTE_LIBRARY) != 0) {
-		user_panic("UXSTACK alloc failed!\n");
+	if(syscall_mem_alloc(newenvid,UXSTACKTOP-BY2PG,PTE_V|PTE_R)<0){
+		user_panic("error  alloc UXSTACK fAILED FORK:181.\n");
+		return 0;
 	}
-	if (syscall_set_pgfault_handler(newenvid, __asm_pgfault_handler, UXSTACKTOP) < 0){
-		user_panic("page fault handler setup failed.\n");
+	if(syscall_set_pgfault_handler(newenvid,__asm_pgfault_handler,UXSTACKTOP)<0){
+		user_panic("panic page fault handler setup failed.\n");
+		return 0;
+	
 	}
+	syscall_set_env_status(newenvid,ENV_RUNNABLE);
+	writef("newenvid is:%d\n",newenvid);
 
-	syscall_set_env_status(newenvid, ENV_RUNNABLE);
-	writef(" newenvid is:%d\n",newenvid);
+
+
+
 	return newenvid;
 }
 

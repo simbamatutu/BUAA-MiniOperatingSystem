@@ -275,7 +275,7 @@ int sys_env_alloc(void)
 		printf("syscall.c:275 fork failed.\n");
 		return -E_NO_FREE_ENV;
 	}
-	bcopy(KERNEL_SP-sizeof(struct Trapframe),&(curenv->env_tf),sizeof(struct Trapframe));
+	bcopy((void*)KERNEL_SP-sizeof(struct Trapframe),&(curenv->env_tf),sizeof(struct Trapframe));
         bcopy(&(curenv->env_tf),&(e->env_tf),TF_SIZE);
         e->env_status = ENV_NOT_RUNNABLE;
         e->env_pri = curenv->env_pri;
