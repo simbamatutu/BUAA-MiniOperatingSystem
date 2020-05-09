@@ -82,22 +82,31 @@ void user_bzero(void *v, u_int n)
 static void
 pgfault(u_int va)
 {
+	
 	u_int *tmp;
+	va = ROUNDDOWN(va, BY2PG);
+	tmp = UTOP - 2 * BY2PG;
+	u_int perm = (*vpt)[VPN(va)] & 0xfff;
 	//	writef("fork.c:pgfault():\t va:%x\n",va);
-    
-    //map the new page at a temporary place
-	tmp = UTEXT - BY2PG;
-        va = ROUNDDOWN(va,BY2PG);
-	//copy the content
-	if(((*vpt)[VPN(va)] & PTE_COW)==0){
-                user_panic("not a COW!");
-        }   
-	 //map the page on the appropriate place
-	syscall_mem_alloc(0,tmp,PTE_V|PTE_R);
-        user_bcopy((void*)va,(void*)tmp,BY2PG);
-        syscall_mem_map(0,tmp,0,va,PTE_V|PTE_R);
-    //unmap the temporary place
-	syscall_mem_unmap(0,tmp);	
+	if ((perm & PTE_COW) != PTE_COW) {
+		user_panic("va not COW fork.c:91\n");
+	} else {
+		//map the new page at a temporary place
+		if (syscall_mem_alloc(0, tmp, perm & (~PTE_COW)|PTE_R) != 0) {
+			user_panic("sysmemalloc error fork.c:96\n");
+		}
+		//copy the content
+		user_bcopy((void *)va, (void *)tmp, BY2PG);
+		//map the page on the appropriate place
+		if (syscall_mem_map(0, tmp, 0, va, perm & (~PTE_COW)|PTE_R) != 0) {
+			user_panic("error sys_mem_mar fork,c:102\n");
+		}
+		//unmap the temporary place
+		if (syscall_mem_unmap(0, tmp) != 0) {
+			user_panic("error sys_mem_unmap error fork.c:106\n");
+		}
+	}
+	
 }
 
 /* Overview:
@@ -123,15 +132,18 @@ duppage(u_int envid, u_int pn)
 	u_int addr;
 	u_int perm;
 	 perm = (*vpt)[pn] & 0xfff;
-        if (perm & PTE_V == 0) {
-                return;
-        }
-        if(((perm & PTE_R)!=0) && ((perm & PTE_LIBRARY)==0)){
-                syscall_mem_map(0,addr,envid,addr,perm|PTE_COW);
-                syscall_mem_map(0,addr,0,addr,perm|PTE_COW);
-        } else {
-                syscall_mem_map(0,addr,envid,addr,perm);
-        }
+        if ((perm & PTE_R) != 0 && (perm & PTE_V) != 0 && (perm & PTE_LIBRARY) == PTE_LIBRARY) {
+		perm = perm | PTE_R; 
+	}
+	else if ((perm & PTE_R) != 0 || (perm & PTE_COW) == PTE_COW) {
+		perm = perm | PTE_COW; //set to copy on write
+	}
+	if (syscall_mem_map(0, pn * BY2PG, envid, pn * BY2PG, perm) != 0) {
+		user_panic("syscall_mem_map for son failed!\n");
+	}
+	if (syscall_mem_map(0, pn * BY2PG, 0, pn * BY2PG, perm) != 0) {
+		user_panic("syscall_mem_map for father failed!\n");
+	}
 	//	user_panic("duppage not implemented");
 }
 
@@ -153,31 +165,32 @@ fork(void)
 	u_int newenvid;
 	extern struct Env *envs;
 	extern struct Env *env;
-	u_int i;
+	u_int i,j;
 	set_pgfault_handler(pgfault);
         newenvid = syscall_env_alloc();
-        if(newenvid==0){
-                env = envs + ENVX(syscall_getenvid());
-        } else {
-                writef("fathern");
-                for(i = 0;i < USTACKTOP;i+=BY2PG){
-                        if ((*vpd)[PDX(i)] == 0) {
-                                i = i - BY2PG;
-                                i = i + PDMAP;
-                                continue;
-                        }
-                        duppage(newenvid,VPN(i));
-                }
-                writef("endn");
-                syscall_mem_alloc(newenvid,UXSTACKTOP-BY2PG,PTE_V|PTE_R);
-                syscall_set_pgfault_handler(newenvid,__asm_pgfault_handler,UXSTACKTOP);
-                syscall_set_env_status(newenvid,ENV_RUNNABLE);
-        }
-	//The parent installs pgfault using set_pgfault_handler
+	if (newenvid == 0) {
+		env = &envs[ENVX(syscall_getenvid())];
+		return 0;
+	}
 
-	//alloc a new alloc
+	for (i = 0; i < USTACKTOP; i += PDMAP) {
+		if ((*vpd)[PDX(i)]) {
+			for(j = 0; j < PDMAP && i + j < USTACKTOP; j += BY2PG){
+				if((*vpt)[VPN(i + j)]){
+					duppage(newenvid, VPN(i + j));
+				}
+			}
+		}
+	}
+	if (syscall_mem_alloc(newenvid, UXSTACKTOP - BY2PG, PTE_V | PTE_R | PTE_LIBRARY) != 0) {
+		user_panic("UXSTACK alloc failed!\n");
+	}
+	if (syscall_set_pgfault_handler(newenvid, __asm_pgfault_handler, UXSTACKTOP) < 0){
+		user_panic("page fault handler setup failed.\n");
+	}
 
-	writef("10n");
+	syscall_set_env_status(newenvid, ENV_RUNNABLE);
+	writef(" newenvid is:%d\n",newenvid);
 	return newenvid;
 }
 

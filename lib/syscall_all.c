@@ -118,7 +118,7 @@ int sys_set_pgfault_handler(int sysno, u_int envid, u_int func, u_int xstacktop)
 	// Your code here.
 	struct Env *env;
 	int ret;
-	if((ret=envid2env(envid,&env,0))){
+	if((ret=envid2env(envid,&env,0))<0){
                 return ret;
         }
         env->env_pgfault_handler = func;
@@ -148,9 +148,11 @@ int sys_set_pgfault_handler(int sysno, u_int envid, u_int func, u_int xstacktop)
 int sys_mem_alloc(int sysno, u_int envid, u_int va, u_int perm)
 {
         if(va < 0 || va >= UTOP){
+		printf("error syscall_all.c:151\n");
                 return -E_INVAL;
         }
         if((perm & PTE_COW) || !(perm & PTE_V)){
+		printf("error sysall_all.c:155\n");
                 return -E_INVAL;
         }	// Your code here.
 	struct Env *env;
@@ -238,7 +240,7 @@ int sys_mem_unmap(int sysno, u_int envid, u_int va)
 {
 	// Your code here.
 	
-	int ret;
+	int ret=0;
 	struct Env *env;
 	if(va < 0 || va >= UTOP){
                 return -E_INVAL;
@@ -267,13 +269,13 @@ int sys_mem_unmap(int sysno, u_int envid, u_int va)
 int sys_env_alloc(void)
 {
 	// Your code here.
-	int r;
+
 	struct Env *e;
+	if(env_alloc(&e,curenv->env_id)<0){
+		printf("syscall.c:275 fork failed.\n");
+		return -E_NO_FREE_ENV;
+	}
 	bcopy(KERNEL_SP-sizeof(struct Trapframe),&(curenv->env_tf),sizeof(struct Trapframe));
-        r = env_alloc(&e,curenv->env_id);
-        if(r<0){
-                return -E_NO_FREE_ENV;
-        }
         bcopy(&(curenv->env_tf),&(e->env_tf),TF_SIZE);
         e->env_status = ENV_NOT_RUNNABLE;
         e->env_pri = curenv->env_pri;
@@ -301,10 +303,11 @@ int sys_set_env_status(int sysno, u_int envid, u_int status)
 	// Your code here.
 	struct Env *env;
 	int ret;
-	if(status!=ENV_RUNNABLE && status!=ENV_NOT_RUNNABLE && status!=ENV_FREE){
+	if(status!=ENV_RUNNABLE && status!=ENV_NOT_RUNNABLE && status!=ENV_FREE){	printf("illegal argument syscall_all:306.\n");
                 return -E_INVAL;
         }
         if(status == env->env_status){
+		printf("syscal_all:309\n");
                 return;
         }
         if((ret = envid2env(envid,&env,0))){
@@ -368,12 +371,14 @@ void sys_panic(int sysno, char *msg)
 void sys_ipc_recv(int sysno, u_int dstva)
 {
 	if(dstva < 0 || dstva >= UTOP){
-                return -E_INVAL;
+          printf("syscall_all.c:374!\n");     
+	  return;
         }
         curenv->env_ipc_recving = 1;
         curenv->env_ipc_dstva = dstva;
         curenv->env_status = ENV_NOT_RUNNABLE;
-        sys_yield();}
+        sys_yield();
+}
 
 /* Overview:
  * 	Try to send 'value' to the target env 'envid'.
