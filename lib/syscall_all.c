@@ -270,18 +270,7 @@ int sys_env_alloc(void)
 {
 	// Your code here.
 
-	struct Env *e;
-	if(env_alloc(&e,curenv->env_id)<0){
-		printf("syscall.c:275 fork failed.\n");
-		return -E_NO_FREE_ENV;
-	}
-	bcopy((void*)KERNEL_SP-sizeof(struct Trapframe),&(curenv->env_tf),sizeof(struct Trapframe));
-        bcopy(&(curenv->env_tf),&(e->env_tf),TF_SIZE);
-        e->env_status = ENV_NOT_RUNNABLE;
-        e->env_pri = curenv->env_pri;
-        e->env_tf.pc = e->env_tf.cp0_epc;
-        e->env_tf.regs[2] = 0;
-	return e->env_id;
+
 	//	panic("sys_env_alloc not implemented");
 }
 
