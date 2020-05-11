@@ -82,22 +82,29 @@ void user_bzero(void *v, u_int n)
 static void
 pgfault(u_int va)
 {
-	  u_int *tmp;
-        //      writef("fork.c:pgfault():t va:%xn",va);
 
-    //map the new page at a temporary place
-        tmp = UTEXT - BY2PG;
-        va = ROUNDDOWN(va,BY2PG);
-        //copy the content
-        if(((*vpt)[VPN(va)] & PTE_COW)==0){
-                user_panic("not  COW:fork.c:92");
-        }
-    //map the page on the appropriate place
-        syscall_mem_alloc(0,tmp,PTE_V|PTE_R);
-        user_bcopy((void*)va,(void*)tmp,BY2PG);
-        syscall_mem_map(0,tmp,0,va,PTE_V|PTE_R);
-    //unmap the temporary place
-        syscall_mem_unmap(0,tmp);	
+	u_int temp = 0x50000000;
+	//temp = UTOP-2*BY2PG;
+	//first we must make sure that va is align to BY2PG
+	va = ROUNDDOWN(va,BY2PG);
+	u_int perm = (*vpt)[VPN(va)]& 0xfff;
+	//writef("fork.c:pgfault():\t va:%x\n",va);
+	if(perm & PTE_COW){
+		if(syscall_mem_alloc(0,temp,perm &(~PTE_COW))<0){
+			user_panic("syscallmemalloc error.\n");
+		}
+		user_bcopy((void *)va,(void *)temp,BY2PG);
+		if(syscall_mem_map(0,temp,0,va,perm &(~PTE_COW))<0){
+			user_panic("syscallMemMap error.\n");
+		}
+		//map the page on the appropriate place
+		if(syscall_mem_unmap(0,temp)<0){
+			user_panic("syscall_mem_unmap error.\n");
+		}
+	}else{
+	//unmap the temporary place
+		user_panic("va page not COW.\n");
+	}	 
 }
 
 /* Overview:
