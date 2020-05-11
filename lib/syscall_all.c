@@ -301,22 +301,18 @@ int sys_env_alloc(void)
 int sys_set_env_status(int sysno, u_int envid, u_int status)
 {
 	// Your code here.
+	
 	struct Env *env;
 	int ret;
-	if(status!=ENV_RUNNABLE && status!=ENV_NOT_RUNNABLE && status!=ENV_FREE){	printf("illegal argument syscall_all:306.\n");
-                return -E_INVAL;
-        }
-        if(status == env->env_status){
-		printf("syscal_all:309\n");
-                return;
-        }
-        if((ret = envid2env(envid,&env,0))){
-                return ret;
-        }
-        if((env->env_status != ENV_RUNNABLE) && (status == ENV_RUNNABLE)){
-                LIST_INSERT_HEAD(env_sched_list,env,env_sched_link);
-        }
-        env->env_status = status;
+	if(status!= ENV_RUNNABLE && status!=ENV_NOT_RUNNABLE && status!=ENV_FREE){
+		printf("illegal argument syssetenvstatus.\n");
+		return -E_INVAL;
+	}
+	if(envid2env(envid,&env,PTE_V)<0){
+		printf("sysSetEnvStatus can't get the env.\n");
+		return -E_INVAL;
+	}
+	env->env_status = status;
 	return 0;
 	//	panic("sys_env_set_status not implemented");
 }

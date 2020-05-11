@@ -82,31 +82,22 @@ void user_bzero(void *v, u_int n)
 static void
 pgfault(u_int va)
 {
-	
-	u_int *tmp;
-	va = ROUNDDOWN(va, BY2PG);
-	tmp = UTOP - 2 * BY2PG;
-	u_int perm = (*vpt)[VPN(va)] & 0xfff;
-	//	writef("fork.c:pgfault():\t va:%x\n",va);
-	if ((perm & PTE_COW) != PTE_COW) {
-		user_panic("va not COW fork.c:91\n");
-	} else {
-		//map the new page at a temporary place
-		if (syscall_mem_alloc(0, tmp, perm & (~PTE_COW)|PTE_R) != 0) {
-			user_panic("sysmemalloc error fork.c:96\n");
-		}
-		//copy the content
-		user_bcopy((void *)va, (void *)tmp, BY2PG);
-		//map the page on the appropriate place
-		if (syscall_mem_map(0, tmp, 0, va, perm & (~PTE_COW)|PTE_R) != 0) {
-			user_panic("error sys_mem_mar fork,c:102\n");
-		}
-		//unmap the temporary place
-		if (syscall_mem_unmap(0, tmp) != 0) {
-			user_panic("error sys_mem_unmap error fork.c:106\n");
-		}
-	}
-	
+	  u_int *tmp;
+        //      writef("fork.c:pgfault():t va:%xn",va);
+
+    //map the new page at a temporary place
+        tmp = UTEXT - BY2PG;
+        va = ROUNDDOWN(va,BY2PG);
+        //copy the content
+        if(((*vpt)[VPN(va)] & PTE_COW)==0){
+                user_panic("not  COW:fork.c:92");
+        }
+    //map the page on the appropriate place
+        syscall_mem_alloc(0,tmp,PTE_V|PTE_R);
+        user_bcopy((void*)va,(void*)tmp,BY2PG);
+        syscall_mem_map(0,tmp,0,va,PTE_V|PTE_R);
+    //unmap the temporary place
+        syscall_mem_unmap(0,tmp);	
 }
 
 /* Overview:
@@ -129,22 +120,20 @@ pgfault(u_int va)
 static void
 duppage(u_int envid, u_int pn)
 {
-	u_int addr;
-	u_int perm;
-	 perm = (*vpt)[pn] & 0xfff;
-        if ((perm & PTE_R) != 0 && (perm & PTE_V) != 0 && (perm & PTE_LIBRARY) == PTE_LIBRARY) {
-		perm = perm | PTE_R; 
-	}
-	else if ((perm & PTE_R) != 0 || (perm & PTE_COW) == PTE_COW) {
-		perm = perm | PTE_COW; //set to copy on write
-	}
-	if (syscall_mem_map(0, pn * BY2PG, envid, pn * BY2PG, perm) != 0) {
-		user_panic("syscall_mem_map for son failed!\n");
-	}
-	if (syscall_mem_map(0, pn * BY2PG, 0, pn * BY2PG, perm) != 0) {
-		user_panic("syscall_mem_map for father failed!\n");
-	}
-	//	user_panic("duppage not implemented");
+
+	u_int addr = pn*BY2PG;
+        u_int perm;
+        perm = (*vpt)[pn] & 0xfff;
+        if (perm & PTE_V == 0) {
+                return;
+        }
+        if(((perm & PTE_R)!=0) && ((perm & PTE_LIBRARY)==0)){
+                syscall_mem_map(0,addr,envid,addr,perm|PTE_COW);
+                syscall_mem_map(0,addr,0,addr,perm|PTE_COW);
+        } else {
+                syscall_mem_map(0,addr,envid,addr,perm);
+        }
+        //      user_panic("duppage not implemented");
 }
 
 /* Overview:
