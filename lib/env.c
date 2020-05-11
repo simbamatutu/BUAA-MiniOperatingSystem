@@ -193,33 +193,32 @@ env_setup_vm(struct Env *e)
 int
 env_alloc(struct Env **new, u_int parent_id)
 {
-
 	int r;
-	struct Env *e;
-    
+        struct Env *e;
+
     /*Step 1: Get a new Env from env_free_list*/
-	if((e=LIST_FIRST(&env_free_list))==NULL){
-		printf("Sorry,alloc env failed!\n");
-		return -E_NO_FREE_ENV;
-	}
-    
+        if((e = LIST_FIRST(&env_free_list)) == NULL){
+                return -E_NO_FREE_ENV;
+        }
+
     /*Step 2: Call certain function(has been implemented) to init kernel memory layout for this new Env.
      *The function mainly maps the kernel address to this new Env address. */
-	env_setup_vm(e);
+        env_setup_vm(e);
 
     /*Step 3: Initialize every field of new Env with appropriate values*/
-	e->env_parent_id = parent_id;
-	e->env_status = ENV_RUNNABLE;
-	e->env_id = mkenvid(e);
-    /*Step 4: focus on initializing env_tf structure, located at this new Env. 
+        e->env_parent_id = parent_id;
+        e->env_status = ENV_RUNNABLE;
+        e->env_id = mkenvid(e);
+
+    /*Step 4: focus on initializing env_tf structure, located at this new Env.
      * especially the sp register,CPU status. */
     e->env_tf.cp0_status = 0x10001004;
-	e->env_tf.regs[29] = USTACKTOP;
+        e->env_tf.regs[29] = USTACKTOP;//用户栈的结束位置
 
     /*Step 5: Remove the new Env from Env free list*/
-	*new = e;
-	LIST_REMOVE(e,env_link);
-	return 0;
+        *new = e;
+        LIST_REMOVE(e,env_link);
+        return 0;
 }
 
 /* Overview:
@@ -242,47 +241,57 @@ env_alloc(struct Env **new, u_int parent_id)
 static int load_icode_mapper(u_long va, u_int32_t sgsize,
                              u_char *bin, u_int32_t bin_size, void *user_data)
 {
-	struct Env *env = (struct Env *)user_data;
-	struct Page *p = NULL;
-	u_long i;
-	int r;
-	u_long offset = va - ROUNDDOWN(va, BY2PG);
-	/*Step 1: load all content of bin into memory. */
-	for (i = 0; i < bin_size; i += BY2PG) {
-		/* Hint: You should alloc a page and increase the reference count of it. */
-		if(page_alloc(&p)<0){
-			printf("Sorry,alloc page failed!\n");
-			return -E_NO_MEM;
-		}
-		p->pp_ref++;
-		if(i==0)
-			bcopy(bin,(char *)page2kva(p)+offset,((BY2PG-offset)<bin_size-i)?(BY2PG-offset):(bin_size - i));
-		else
-			bcopy(bin+i-offset,(char *)page2kva(p),(BY2PG<bin_size-i)?BY2PG:(bin_size-i));
-		r = page_insert(env->env_pgdir,p,va+i,PTE_V|PTE_R);
-		if(r<0){
-			printf("Sorry,insert a page is failed!\n");
-			return -E_NO_MEM;
-		}
+struct Env *env = (struct Env *)user_data;
+        struct Page *p = NULL;
+        u_long i;
+        int r;
+        u_long offset = va - ROUNDDOWN(va, BY2PG);
 
-	}
-	/*Step 2: alloc pages to reach `sgsize` when `bin_size` < `sgsize`.
+        /*Step 1: load all content of bin into memory. */
+        for (i = 0; i < bin_size; i += BY2PG) {
+                /* Hint: You should alloc a page and increase the reference count of it. */
+                if(page_alloc(&p) < 0) {
+                        return -E_NO_MEM;
+                }
+                if(i == 0) {
+                        u_long len1;
+                        if ((BY2PG-offset) < bin_size){
+                                len1 = BY2PG - offset;
+                        } else {
+                                len1 = bin_size;
+                        }
+                        bcopy(bin,(void*)(page2kva(p)+offset),len1);
+                        i = -offset;
+                }
+                else{
+                        u_long len2;
+                        if(BY2PG < (bin_size - i)){
+                                len2 = BY2PG;
+                        } else {
+                                len2 = bin_size - i;
+                        }
+                        bcopy((bin+i),(void*)page2kva(p),len2);
+                }
+                r = page_insert(env->env_pgdir,p,va+i,PTE_R);
+                if(r < 0){
+                        return -E_NO_MEM;
+                }
+        }
+        /*Step 2: alloc pages to reach `sgsize` when `bin_size` < `sgsize`.
     * i has the value of `bin_size` now. */
-	while (i < sgsize) {
-		if(page_alloc(&p)<0){
-			printf("alloc page failed!\n");
-			return -E_NO_MEM;
-		}
-		p->pp_ref++;
-		r = page_insert(env->env_pgdir,p,va+i,PTE_V|PTE_R);
-		if(r<0){
-			printf("alloc page failed!\n");
-			return -E_NO_MEM;
-		}
-		//bzero(page2kva(p)+offset,BY2PG);
-		i+=BY2PG;
-	}
-	return 0;          
+        while (i < sgsize) {
+                if(page_alloc(&p) < 0){
+                        return -E_NO_MEM;
+                }
+                bzero((void*)page2kva(p),BY2PG);
+                r = page_insert(env->env_pgdir,p,va+i,PTE_R);
+                if(r < 0){
+                        return -E_NO_MEM;
+                }
+                i = i + BY2PG;
+        }
+        return 0;
+          
 }
 /* Overview:
  *  Sets up the the initial stack and program binary for a user process.
@@ -306,31 +315,34 @@ load_icode(struct Env *e, u_char *binary, u_int size)
      *  Remember that the binary image is an a.out format image,
      *  which contains both text and data.
      */
-    struct Page *p = NULL;
-    u_long entry_point;
-    u_long r;
-    u_long perm=PTE_R |PTE_V;
+
+	struct Page *p = NULL;
+        u_long entry_point;
+        u_long r;
+    u_long perm;
 
     /*Step 1: alloc a page. */
+        if(page_alloc(&p) < 0){
+                return;
+        }
 
-	if ( (r = page_alloc(&p)) < 0 )
-    {
-//	printf("load_icode:page_alloc failed ie terminate\n");
-        return;
-    }    /*Step 2: Use appropriate perm to set initial stack for new Env. */
-    /*Hint: Should the user-stack be writable? */
-	if ( (r = page_insert(e->env_pgdir,p,USTACKTOP - BY2PG,perm) ) < 0 )
-    {
-	//printf("icode failed at insert);
-        return ;
-    }
-    /*Step 3:load the binary using elf loader. */
-	if (load_elf(binary, size, &entry_point, (void*)e, load_icode_mapper) < 0) {
-        return;
-    }
+    /*Step 2: Use appropriate perm to set initial stack for new Env. */
+    /*Hint: The user-stack should be writable? */
+        perm = PTE_R;
+        page_insert(e->env_pgdir,p,USTACKTOP-BY2PG,perm);
+
+    /*Step 3:load the binary by using elf loader. */
+        r = load_elf(binary,size,&entry_point,e,load_icode_mapper);
+        if(r < 0){
+                return;
+        }
+
+    
+        e->env_status = ENV_RUNNABLE;
+        LIST_INSERT_HEAD(env_sched_list,e,env_sched_link);
     /*Step 4:Set CPU's PC register as appropriate value. */
-    e->env_tf.pc = entry_point;
-}
+        e->env_tf.pc = entry_point;
+  }
 
 /* Overview:
  *  Allocates a new env with env_alloc, loads the named elf binary into
