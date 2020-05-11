@@ -121,19 +121,7 @@ static void
 duppage(u_int envid, u_int pn)
 {
 
-	u_int addr = pn*BY2PG;
-        u_int perm;
-        perm = (*vpt)[pn] & 0xfff;
-        if (perm & PTE_V == 0) {
-                return;
-        }
-        if(((perm & PTE_R)!=0) && ((perm & PTE_LIBRARY)==0)){
-                syscall_mem_map(0,addr,envid,addr,perm|PTE_COW);
-                syscall_mem_map(0,addr,0,addr,perm|PTE_COW);
-        } else {
-                syscall_mem_map(0,addr,envid,addr,perm);
-        }
-        //      user_panic("duppage not implemented");
+	        //      user_panic("duppage not implemented");
 }
 
 /* Overview:
