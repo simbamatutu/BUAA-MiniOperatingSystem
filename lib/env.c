@@ -345,16 +345,20 @@ load_icode(struct Env *e, u_char *binary, u_int size)
 void
 env_create_priority(u_char *binary, int size, int priority)
 {
-        struct Env *e;
+ 
+struct Env *e;
     /*Step 1: Use env_alloc to alloc a new env. */
-	env_alloc(&e,0);
-    /*Step 2: assign priority to the new env. */
-	e->env_pri=priority;
-    /*Step 3: Use load_icode() to load the named elf binary,
-      and insert it into env_sched_list using LIST_INSERT_HEAD. */
-	load_icode(e,binary,size);
-	LIST_INSERT_HEAD(&env_sched_list[0],e,env_sched_link);
-}
+	if (env_alloc(&e, 0) != 0) {
+		return;
+	}
+
+	/*Step 2: assign priority to the new env. */
+	e->env_pri = priority;
+	//e->env_runs = 0;
+
+    /*Step 3: Use load_icode() to load the named elf binary. */
+	load_icode(e, binary, size);
+ }
 /* Overview:
  * Allocates a new env with default priority value.
  *
@@ -365,9 +369,16 @@ env_create_priority(u_char *binary, int size, int priority)
 void
 env_create(u_char *binary, int size)
 {
-     /*Step 1: Use env_create_priority to alloc a new env with priority 1 */
-	env_create_priority(binary, size, 1);
-}
+   
+struct Env *e;
+    /*Step 1: Use env_alloc to alloc a new env. */
+	if(env_alloc(&e,0)<0){
+		
+		return;
+	}
+    /*Step 2: Use load_icode() to load the named elf binary. */
+	load_icode(e,binary,size);
+ }
 
 /* Overview:
  *  Frees env e and all memory it uses.
@@ -453,15 +464,19 @@ env_run(struct Env *e)
     /*Step 1: save register state of curenv. */
     /* Hint: if there is an environment running, you should do
     *  switch the context and save the registers. You can imitate env_destroy() 's behaviors.*/
+
 	struct Trapframe *old = (struct Trapframe *)(TIMESTACK-sizeof(struct Trapframe));
-        if(curenv){
-                bcopy(old,&(curenv->env_tf),sizeof(struct Trapframe));
-                curenv->env_tf.pc = old->cp0_epc;
-        }
+	if(curenv){
+		bcopy(old,&(curenv->env_tf),sizeof(struct Trapframe));
+		//curenv->env_tf.pc += 4;//aim to mips 32
+		curenv->env_tf.pc = old->cp0_epc;
+		//printf("cp0_epc:%x\n",curenv->env_tf.pc);
+	}
+
     /*Step 2: Set 'curenv' to the new environment. */
 	curenv = e;
-    /*Step 3: Use lcontext() to switch to its address space. */	lcontext((int)(e->env_pgdir));
-
+    /*Step 3: Use lcontext() to switch to its address space. */
+	lcontext(KADDR(curenv->env_cr3))
     /*Step 4: Use env_pop_tf() to restore the environment's
      * environment   registers and return to user mode.
      *
