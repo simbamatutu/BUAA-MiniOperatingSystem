@@ -197,13 +197,17 @@ env_alloc(struct Env **new, u_int parent_id)
     struct Env *e;
 
     /*Step 1: Get a new Env from env_free_list*/
-	if((e = LIST_FIRST(&env_free_list)) == NULL){
-                return -E_NO_FREE_ENV;
-}
-        
+	
+	if(LIST_EMPTY(&env_free_list)) {
+		return -E_NO_FREE_ENV;
+	}
+        e = LIST_FIRST(&env_free_list);        
     /*Step 2: Call certain function(has been completed just now) to init kernel memory layout for this new Env.
      *The function mainly maps the kernel address to this new Env address. */
-	env_setup_vm(e);	
+	if((r = env_setup_vm(e)) != 0) {
+		return r;
+	}
+
 
     /*Step 3: Initialize every field of new Env with appropriate values.*/
     e->env_id = mkenvid(e);

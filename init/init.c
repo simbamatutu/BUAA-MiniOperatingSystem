@@ -17,6 +17,7 @@ void mips_init()
 	page_init();
 	
 	env_init();
+
 	
 	ENV_CREATE(user_fktest);
 	ENV_CREATE(user_pingpong);
