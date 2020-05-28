@@ -1,6 +1,0 @@
-palindrome: palindrome.c
-	gcc -o palindrome palindrome.c
-
-clean:
-	rm -rf *.o palindrome
-
