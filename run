@@ -2,4 +2,4 @@
 
 make clean
 make
-~/work/77066004-lab/gxemul -E testmips -C R3000 -M 64 gxemul/vmlinux
+gxemul -E testmips -C R3000 -M 64 gxemul/vmlinux
