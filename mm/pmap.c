@@ -5,6 +5,8 @@
 #include "error.h"
 
 
+
+
 /* These variables are set by mips_detect_memory() */
 u_long maxpa;            /* Maximum physical address */
 u_long npage;            /* Amount of memory(in pages) */
@@ -138,6 +140,8 @@ void boot_map_segment(Pde *pgdir, u_long va, u_long size, u_long pa, int perm)
 	*pgtable_entry = (pa + i) | perm | PTE_V;
 	}
 }
+
+
 
 /* Overview:
     Set up two-level page table.
