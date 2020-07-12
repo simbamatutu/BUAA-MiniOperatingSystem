@@ -1,6 +1,6 @@
 # BUAA Mini Operating system
 
-The operating system is implemtnted using MIPS runs on GXemul computer architecture emulator.
+The operating system is implemented using MIPS and runs on GXemul computer architecture emulator.
 
 | Lab   | Lab description                   |
 |-------|-----------------------------------|
